@@ -1,0 +1,97 @@
+README for aci-logical-topology
+===============================
+
+This repository contains files to pull data from an ACI fabric about tenants, VRFs, BDs, EPGs, etc.
+The information is used to create a customized data model, an excel file and an json file.
+
+Manifest:
+=========
+aci-logical-topology/
+    bin/                                    Directory for playbooks and template put under version control
+        jinja-templates/                    Directory containing Jinja templates, grouped by platform. Empty for now
+        var-files/                          Directory containing consistency check definitions
+        
+        pb-create-aci.yml                   Playbook to create a classic tenant in ACI
+        logical-topology-cli.py             Python script providing a kind of CLI to the created JSON file
+        logical-topology-consistency.py     Python script to do some consistency checks
+        logical-topology-converter.py       Python script to parse JSON files pulled from fabric and create customized excel and json files
+        pb-logical-topology.yml             Playbook to pull information from ACI fabrics
+        README
+        
+    data/                                   Directory for runtime data, version control is not necessary
+        output-files/                       Directory containing files created by ansible playbooks. Subdirectories for every environment, based on the group name in the Ansible inventory
+        var-files/                          Directory for data model files for specific projects. Empty for now
+
+Usage:
+======
+Day-0 preparations:
+===================
+#1 Create your credentials file
+Copy the file ".vars-aci-credentials.yml" into your home directory and fill in "apic_user" and "apic_password".
+Make sure to adjust the file permissions that nobody else can read this file.
+
+#2 Create your Ansible inventory, if you haven't done that yet.
+
+#3 Prepare your file for consistency checks.
+Edit the file "aci-logical-topology/bin/var-files/vars-consistency-Env1.yml" and fill in the specifics for your environment. 
+Replace "Env1" with the name of your environment. This should be the group name as defined in the Ansible inventory.
+If you have more ACI fabrics you can create a specific file for every environment here.
+
+#4 Add your APIC to playbook
+The playbook "pb-logical-topology.yml" can pull information from different APICs in parallel. Just make sure to list every APIC as a host at the beginning of the playbook.
+
+#5 Add your environment name to the python scripts
+The scripts "logical-topology-cli.py", "logical-topology-consistency.py" and "logical-topology-consistency.py" contain a line with the definition of valid environments.
+The line looks like this:
+    valid_envs = ['Env1']
+Replace "Env1" with the name of your environment.
+The script will pick the input directory based on this name.
+
+Day-to-day usage:
+=================
+#1 Run the ansible playbook "pb-logical-topology.yml".
+This will pull information about objects like tenants, BDs, EPGs, etc. and store them in separate JSON files in the data-directory.
+The files will be stored in subdirectories based on the group name from the Ansible inventory.
+
+Copy-and-paste ready: ------------------------------------------------------------------------------------------------------------------------------------------
+cd /<add-your-path-here/aci-logical-topology/bin
+ansible-playbook [-i <your-inventory-file>] pb-logical-topology.yml
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#2 Run converter script
+This script will parse the JSON files pulled from ACI for this specific environment and create the excel file and a JSON file.
+Replace "Env1" with the name of your environment.
+
+Copy-and-paste ready: ------------------------------------------------------------------------------------------------------------------------------------------
+cd /<add-your-path-here/aci-logical-topology/bin
+python logical-topology-converter.py -e Env1
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+#3 Run consistency check
+The consistency check will perform varies checks based on the JSON file created by the converter script and the consistency definitions in the var-file.
+The consistency checks are:
+- Portgroup
+- BD defaults
+- subnet overlaps
+
+Replace "Env1" with the name of your environment.
+
+Copy-and-paste ready: ------------------------------------------------------------------------------------------------------------------------------------------
+cd /<add-your-path-here/aci-logical-topology/bin
+python logical-topology-consistency.py -e Env1
+----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Consistency check:
+- Portgroup
+Sometimes it is important to make sure that a group of ports is connected to the same EPG, e.g. 2 nodes of a firewall cluster or 4 ports connection to our DNS servers.
+The ports within a portgroup are checked against the ports attached to an EPG.
+If all ports of the portgroup or none of the ports are attached to the EPG everything is okay.
+When only a subset of the ports defined in a portgroup are attached to an EPG the missing ports will be reported.
+You can the use the output  as input for the plabook "pb-deploy-static-ports.yml" from the "classic-env" repository to add these ports to the EPG.
+
+- BD defaults
+You can define the defaults for certain BD configuration parameters as golden template. You can define different defaults for BDs with a subnet and without a subnet.
+If a configuration parameter deviates from this golden template if will be listed in the output.
+
+- Subnet overlap
+The script will compare subnets defined for BDs and EPGs within an Tenant/VRF and report overlaps.

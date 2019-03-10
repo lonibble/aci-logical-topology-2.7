@@ -1,0 +1,230 @@
+---
+# Playbook to create the logical topology of ACI
+#
+
+- name: ACI logical topology
+  vars_files:
+    - ~/.vars-aci-credentials.yml
+  hosts:
+  - <add-your-aci-hosts-here>
+
+  connection: local
+  gather_facts: no
+
+  vars:
+    base_dir: "../data/output-files/"
+
+  tasks:
+  #
+  # list of tenants
+  #
+  - name: Get a list of tenants from ACI
+    aci_tenant:
+      state=query
+      hostname="{{ inventory_hostname }}"
+      username="{{ apic_user }}"
+      password="{{ apic_pass }}"
+      use_proxy=no
+      validate_certs=no
+    no_log: true
+    register: out
+
+  #
+  # Write tenant information to a file for processing later
+  #
+  - copy: content="{{ out.current }}" dest={{ base_dir }}{{ [group_names][0][0] }}/tenants-output.json
+
+  #
+  # list of VRFs
+  #
+  - name: Get a list of VRFs from ACI
+    aci_vrf:
+      state=query
+      hostname="{{ inventory_hostname }}"
+      username="{{ apic_user }}"
+      password="{{ apic_pass }}"
+      use_proxy=no
+      validate_certs=no
+    no_log: true
+    register: out
+
+  #
+  # Write VRF information to a file for processing later
+  #
+  - copy: content="{{ out.current }}" dest={{ base_dir }}{{ [group_names][0][0] }}/vrfs-output.json
+
+  #
+  # list of BDs
+  #
+  - name: Get a list of BDs from ACI
+    aci_bd:
+      state=query
+      hostname="{{ inventory_hostname }}"
+      username="{{ apic_user }}"
+      password="{{ apic_pass }}"
+      use_proxy=no
+      validate_certs=no
+    no_log: true
+    register: out
+
+  #
+  # Write BD information to a file for processing later
+  #
+  - copy: content="{{ out.current }}" dest={{ base_dir }}{{ [group_names][0][0] }}/bds-output.json
+    
+  #
+  # list of BD subnets (public)
+  #
+  - name: Get a list of BD subnets from ACI
+    aci_bd_subnet:
+      state=query
+      hostname="{{ inventory_hostname }}"
+      username="{{ apic_user }}"
+      password="{{ apic_pass }}"
+      use_proxy=no
+      validate_certs=no
+    # no_log: true
+    register: out
+
+  #
+  # Write BD subnet information to a file for processing later
+  #
+  - copy: content="{{ out.current }}" dest={{ base_dir }}{{ [group_names][0][0] }}/bd-subnets-output.json
+    
+  #
+  # list of APs
+  #
+  - name: Get a list of APs from ACI
+    aci_ap:
+      state=query
+      hostname="{{ inventory_hostname }}"
+      username="{{ apic_user }}"
+      password="{{ apic_pass }}"
+      use_proxy=no
+      validate_certs=no
+    no_log: true
+    register: out
+
+  #
+  # Write AP information to a file for processing later
+  #
+  - copy: content="{{ out.current }}" dest={{ base_dir }}{{ [group_names][0][0] }}/aps-output.json
+
+  #
+  # list of EPGs
+  #
+  - name: Get a list of EPGs from ACI
+    aci_epg:
+      state=query
+      hostname="{{ inventory_hostname }}"
+      username="{{ apic_user }}"
+      password="{{ apic_pass }}"
+      use_proxy=no
+      validate_certs=no
+    no_log: true
+    register: out
+
+  #
+  # Write EPG information to a file for processing later
+  #
+  - copy: content="{{ out.current }}" dest={{ base_dir }}{{ [group_names][0][0] }}/epgs-output.json
+
+  #
+  # list of Static ports
+  #
+  - name: Get a list of Static ports from ACI
+    aci_static_binding_to_epg:
+      state=query
+      hostname="{{ inventory_hostname }}"
+      username="{{ apic_user }}"
+      password="{{ apic_pass }}"
+      use_proxy=no
+      validate_certs=no
+    no_log: true
+    register: out
+
+  #
+  # Write EPG information to a file for processing later
+  #
+  - copy: content="{{ out.current }}" dest={{ base_dir }}{{ [group_names][0][0] }}/static-ports-output.json
+
+  #
+  # list of Provider Contracts
+  #
+  - name: Get a list of Provider Contracts from ACI
+    aci_epg_to_contract:
+      state=query
+      contract_type=provider
+      hostname="{{ inventory_hostname }}"
+      username="{{ apic_user }}"
+      password="{{ apic_pass }}"
+      use_proxy=no
+      validate_certs=no
+    # no_log: true
+    register: out
+
+  #
+  # Write provider contract information to a file for processing later
+  #
+  - copy: content="{{ out.current }}" dest={{ base_dir }}{{ [group_names][0][0] }}/provider-contracts-output.json
+
+  #
+  # list of Consumer Contracts
+  #
+  - name: Get a list of Consumer Contracts from ACI
+    aci_epg_to_contract:
+      state=query
+      contract_type=consumer
+      hostname="{{ inventory_hostname }}"
+      username="{{ apic_user }}"
+      password="{{ apic_pass }}"
+      use_proxy=no
+      validate_certs=no
+    # no_log: true
+    register: out
+
+  #
+  # Write consumer contract information to a file for processing later
+  #
+  - copy: content="{{ out.current }}" dest={{ base_dir }}{{ [group_names][0][0] }}/consumer-contracts-output.json
+
+  #
+  # list of L3Outs
+  #
+  - name: Get a list of L3Outs from ACI
+    aci_rest:
+      path: api/class/l3extOut.json?rsp-subtree=full
+      method: get
+      hostname: "{{ inventory_hostname }}"
+      username: "{{ apic_user }}"
+      password: "{{ apic_pass }}"
+      use_proxy: no
+      validate_certs: no
+    register: out
+
+  #
+  # Write L3Out information to a file for processing later
+  #
+  - copy: content="{{ out.imdata }}" dest={{ base_dir }}{{ [group_names][0][0] }}/l3outs-output.json
+
+  #
+  # list of L3Outs match rules
+  #
+  - name: Get a list of L3Outs match rules from ACI
+    aci_rest:
+      path: api/class/rtctrlSubjP.json?rsp-subtree=full
+      method: get
+      hostname: "{{ inventory_hostname }}"
+      username: "{{ apic_user }}"
+      password: "{{ apic_pass }}"
+      use_proxy: no
+      validate_certs: no
+    register: out
+
+  #
+  # Write L3Out match rule information to a file for processing later
+  #
+  - copy: content="{{ out.imdata }}" dest={{ base_dir }}{{ [group_names][0][0] }}/l3outs-mr-output.json
+
+# This is the end, my friend
+...

@@ -1,0 +1,45 @@
+# conditions for logical testing
+# Test static ports attached to an EPG
+# For Acitve/Standby cluster it might be necessary that 2 ports are attached to an EPG to ensure failover functionality.
+# E.g. firewall cluster nodes are attached to leafs in Pod1 and Pod3, respectively. If there is an EPG where only one port is attached, that might be a problem.
+port_groups:
+  fw-cluster1:
+    - 'topology/pod-1/protpaths-2101-2102/pathep-[cluster1-node1_ipg]'
+    - 'topology/pod-3/protpaths-2301-2302/pathep-[cluster1-node2_ipg]'
+  server-group1:
+    - 'topology/pod-1/paths-2103/pathep-[eth1/18]'
+    - 'topology/pod-1/paths-2103/pathep-[eth1/21]'
+    - 'topology/pod-1/paths-2103/pathep-[eth1/23]'
+
+# Subnet overlap
+# with ignore_tenants you can define a list of string. If a tenant name starts with one of these strings it is being ignored. Used for Openstack.
+subnet_overlap:
+  ignore_tenants:
+#    - 'mgmt'
+#    - 'infra'
+#    - 'prj'
+    
+# BD default settings
+# with ignore_tenants you can define a list of string. If a tenant name starts with one of these strings it is being ignored. Used for Openstack.
+bd_defaults:
+  ignore_tenants:
+    - 'mgmt'
+    - 'infra'
+    - 'prj'
+    - 'common'
+  bd_without_subnet:
+    arpFlood:              "yes"
+    unicastRoute:          "no"
+    unkMcastAct:           "flood"
+    unkMacUcastAct:        "flood"
+    multiDstPktAct:        "bd-flood"
+    limitIpLearnToSubnets: "yes"
+  bd_with_subnet:
+    arpFlood:              "no"
+    unicastRoute:          "yes"
+    unkMcastAct:           "flood"
+    unkMacUcastAct:        "proxy"
+    multiDstPktAct:        "bd-flood"
+    limitIpLearnToSubnets: "yes"
+
+
